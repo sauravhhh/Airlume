@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Airlume — Air quality check</title>
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#146B60" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Airlume" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --mist:#F5F8F7;
+    --paper:#FFFFFF;
+    --ink:#16262A;
+    --ink-soft:#5B6E72;
+    --line:#E1E8E7;
+    --teal:#1E8C7E;
+    --teal-deep:#146B60;
+    --teal-tint:#E4F3F0;
+
+    --good:#3FA66B;
+    --moderate:#DDA92D;
+    --sensitive:#E08434;
+    --unhealthy:#D2504C;
+    --very-unhealthy:#8B4FBF;
+    --hazardous:#7A3038;
+
+    --radius-lg: 20px;
+    --radius-sm: 12px;
+    --shadow: 0 1px 2px rgba(22,38,42,0.04), 0 8px 24px -12px rgba(22,38,42,0.12);
+  }
+
+  *{ box-sizing:border-box; }
+
+  html,body{
+    margin:0;
+    padding:0;
+    min-height:100%;
+    background:
+      radial-gradient(circle at 15% -10%, #E9F5F2 0%, transparent 45%),
+      radial-gradient(circle at 100% 10%, #EDF7F4 0%, transparent 40%),
+      var(--mist);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  body{
+    display:flex;
+    justify-content:center;
+    min-height:100vh;
+    padding:0 16px;
+  }
+
+  .app{
+    width:100%;
+    max-width:460px;
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+    padding-bottom:24px;
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:28px 4px 20px;
+  }
+
+  .logo-mark{
+    width:38px;
+    height:38px;
+    flex-shrink:0;
+  }
+
+  .brand{
+    display:flex;
+    flex-direction:column;
+    line-height:1.1;
+  }
+
+  .brand-name{
+    font-family:'Sora', sans-serif;
+    font-weight:700;
+    font-size:20px;
+    color:var(--ink);
+    letter-spacing:-0.01em;
+  }
+
+  .brand-tag{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin-top:2px;
+  }
+
+  /* ---------- Search ---------- */
+  .search-wrap{
+    position:relative;
+    margin-bottom:8px;
+  }
+
+  .search-box{
+    display:flex;
+    align-items:center;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:var(--radius-sm);
+    padding:4px 6px 4px 16px;
+    box-shadow:var(--shadow);
+    transition:border-color .15s ease;
+  }
+
+  .search-box:focus-within{
+    border-color:var(--teal);
+  }
+
+  .search-box svg{
+    flex-shrink:0;
+    color:var(--ink-soft);
+  }
+
+  .search-box input{
+    flex:1;
+    border:none;
+    outline:none;
+    background:transparent;
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:15.5px;
+    color:var(--ink);
+    padding:12px 10px;
+    min-width:0;
+  }
+
+  .search-box input::placeholder{
+    color:#9AA8AA;
+  }
+
+  .icon-btn{
+    border:none;
+    background:transparent;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:34px;
+    height:34px;
+    border-radius:9px;
+    color:var(--ink-soft);
+    flex-shrink:0;
+    transition:background .15s ease, color .15s ease;
+  }
+
+  .icon-btn:hover{
+    background:var(--teal-tint);
+    color:var(--teal-deep);
+  }
+
+  .go-btn{
+    background:var(--teal);
+    color:#fff;
+    width:38px;
+    height:38px;
+    border-radius:9px;
+  }
+
+  .go-btn:hover{
+    background:var(--teal-deep);
+    color:#fff;
+  }
+
+  .go-btn:disabled{
+    opacity:.45;
+    cursor:default;
+    background:var(--teal);
+  }
+
+  .locate-row{
+    display:flex;
+    justify-content:flex-end;
+    padding:8px 6px 0;
+  }
+
+  .locate-link{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    background:none;
+    border:none;
+    color:var(--teal-deep);
+    font-size:13px;
+    font-family:'IBM Plex Sans', sans-serif;
+    cursor:pointer;
+    padding:4px 2px;
+  }
+
+  .locate-link:hover{ text-decoration:underline; }
+
+  /* ---------- Main / states ---------- */
+  main{
+    flex:1;
+    margin-top:22px;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+  }
+
+  .state-panel{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:var(--radius-lg);
+    box-shadow:var(--shadow);
+    padding:44px 24px;
+    text-align:center;
+    color:var(--ink-soft);
+  }
+
+  .state-panel svg{ color:#BFD1CF; margin-bottom:14px; }
+  .state-panel p{ margin:0; font-size:14.5px; line-height:1.5; }
+  .state-panel .state-title{
+    font-family:'Sora', sans-serif;
+    font-size:16.5px;
+    font-weight:600;
+    color:var(--ink);
+    margin-bottom:6px;
+  }
+
+  .spinner{
+    width:26px; height:26px;
+    border-radius:50%;
+    border:3px solid var(--teal-tint);
+    border-top-color:var(--teal);
+    margin:0 auto 14px;
+    animation:spin .8s linear infinite;
+  }
+
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  /* ---------- Result: hero card ---------- */
+  .hero{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:var(--radius-lg);
+    box-shadow:var(--shadow);
+    padding:28px 24px 24px;
+    position:relative;
+    overflow:hidden;
+  }
+
+  .hero::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:var(--aqi-color, var(--teal));
+    opacity:.06;
+    pointer-events:none;
+  }
+
+  .hero-place{
+    font-size:13.5px;
+    color:var(--ink-soft);
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-bottom:18px;
+  }
+
+  .hero-place svg{ flex-shrink:0; }
+
+  .hero-main{
+    display:flex;
+    align-items:flex-end;
+    gap:18px;
+  }
+
+  .aqi-number{
+    font-family:'Sora', sans-serif;
+    font-weight:700;
+    font-size:clamp(56px, 16vw, 68px);
+    line-height:.9;
+    color:var(--aqi-color, var(--ink));
+  }
+
+  .aqi-meta{
+    padding-bottom:6px;
+  }
+
+  .aqi-label{
+    font-family:'Sora', sans-serif;
+    font-weight:600;
+    font-size:17px;
+    color:var(--ink);
+  }
+
+  .aqi-scale{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin-top:2px;
+  }
+
+  .aqi-blurb{
+    margin-top:16px;
+    font-size:14px;
+    line-height:1.55;
+    color:var(--ink-soft);
+    border-top:1px solid var(--line);
+    padding-top:16px;
+  }
+
+  /* ---------- Pollutant grid ---------- */
+  .grid-title{
+    font-size:13px;
+    color:var(--ink-soft);
+    padding:0 2px;
+    margin-bottom:2px;
+  }
+
+  .pollutant-grid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+    border-radius:var(--radius-lg);
+    overflow:hidden;
+    box-shadow:var(--shadow);
+  }
+
+  .pollutant{
+    background:var(--paper);
+    padding:16px 10px;
+    text-align:center;
+  }
+
+  .pollutant .name{
+    font-size:12px;
+    color:var(--ink-soft);
+    margin-bottom:6px;
+  }
+
+  .pollutant .value{
+    font-family:'Sora', sans-serif;
+    font-weight:600;
+    font-size:19px;
+    color:var(--ink);
+  }
+
+  .pollutant .unit{
+    font-size:10.5px;
+    color:#9AA8AA;
+    margin-top:1px;
+  }
+
+  /* ---------- Footer ---------- */
+  footer{
+    display:flex;
+    justify-content:center;
+    padding-top:26px;
+  }
+
+  footer p{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin:0;
+  }
+
+  footer span{ color:#D2504C; }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce){
+    .spinner{ animation:none; border-top-color:var(--teal); }
+  }
+
+  /* Focus visibility */
+  button:focus-visible, input:focus-visible{
+    outline:2px solid var(--teal);
+    outline-offset:2px;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <header>
+    <svg class="logo-mark" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="20" cy="20" r="20" fill="#146B60"/>
+      <path d="M8 16c3-4 8-4 11-1s6 3 9 0" stroke="#7FE0CC" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M8 22c3-4 8-4 11-1s6 3 9 0" stroke="#B7F2E4" stroke-width="2.4" stroke-linecap="round" opacity="0.85"/>
+      <path d="M10 28c3-4 8-4 11-1s6 3 9 0" stroke="#E4F3F0" stroke-width="2.4" stroke-linecap="round" opacity="0.6"/>
+    </svg>
+    <div class="brand">
+      <span class="brand-name">Airlume</span>
+      <span class="brand-tag">Know what you're breathing</span>
+    </div>
+  </header>
+
+  <div class="search-wrap">
+    <form class="search-box" id="searchForm" autocomplete="off">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
+        <path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <input type="text" id="cityInput" placeholder="Search a city or place" aria-label="Search a city or place">
+      <button type="button" class="icon-btn" id="clearBtn" aria-label="Clear search" style="display:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button type="submit" class="icon-btn go-btn" id="goBtn" aria-label="Check air quality">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </form>
+    <div class="locate-row">
+      <button class="locate-link" id="locateBtn" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        Use current location
+      </button>
+    </div>
+  </div>
+
+  <main id="mainArea">
+    <div class="state-panel" id="emptyState">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 15c2-3 6-3 8-1s5 2 7-1M3 10c2-3 6-3 8-1s5 2 7-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+      <div class="state-title">Check the air, anywhere</div>
+      <p>Search for a city to see current air quality, pollutant<br>levels, and what they mean for you.</p>
+    </div>
+  </main>
+
+  <footer>
+    <p>Made with <span>❤️</span> by Sauravhhh</p>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  const form = document.getElementById('searchForm');
+  const input = document.getElementById('cityInput');
+  const clearBtn = document.getElementById('clearBtn');
+  const goBtn = document.getElementById('goBtn');
+  const locateBtn = document.getElementById('locateBtn');
+  const mainArea = document.getElementById('mainArea');
+
+  input.addEventListener('input', () => {
+    clearBtn.style.display = input.value.length ? 'flex' : 'none';
+  });
+
+  clearBtn.addEventListener('click', () => {
+    input.value = '';
+    clearBtn.style.display = 'none';
+    input.focus();
+    showEmpty();
+  });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const q = input.value.trim();
+    if (!q) return;
+    lookupCity(q);
+  });
+
+  locateBtn.addEventListener('click', () => {
+    if (!navigator.geolocation) {
+      showError('Location unavailable', "Your browser doesn't support location lookup. Try searching a city instead.");
+      return;
+    }
+    locateBtn.disabled = true;
+    showLoading('Finding your location…');
+    // GPS cold fixes on phones often take longer than a few seconds, so allow
+    // plenty of time and accept a recently cached position. If high-accuracy
+    // (GPS) times out, retry with fast network-based positioning.
+    requestPosition({ enableHighAccuracy: true, timeout: 25000, maximumAge: 120000 }, false);
+  });
+
+  function requestPosition(opts, retried){
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        locateBtn.disabled = false;
+        fetchAirQuality(pos.coords.latitude, pos.coords.longitude, 'Your location', '');
+      },
+      (err) => {
+        if (err && err.code === 3 && !retried) {
+          requestPosition({ enableHighAccuracy: false, timeout: 25000, maximumAge: 120000 }, true);
+          return;
+        }
+        locateBtn.disabled = false;
+        showGeoError(err);
+      },
+      opts
+    );
+  }
+
+  function showGeoError(err){
+    const code = err && err.code;
+    if (code === 1) {
+      showError('Location blocked', 'Your browser is blocking location access for this site. Tap the tune/lock icon in the address bar, set Location to Allow, then try again.');
+    } else if (code === 2) {
+      showError('Location unavailable', "Your phone couldn't get a position fix. If you're indoors, move near a window or step outside, then try again.");
+    } else {
+      showError("Couldn't get your location", 'Getting a fix is taking too long. Check your connection and GPS, or search for a city instead.');
+    }
+  }
+
+  function showEmpty(){
+    mainArea.innerHTML = `
+      <div class="state-panel">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 15c2-3 6-3 8-1s5 2 7-1M3 10c2-3 6-3 8-1s5 2 7-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <div class="state-title">Check the air, anywhere</div>
+        <p>Search for a city to see current air quality, pollutant<br>levels, and what they mean for you.</p>
+      </div>`;
+  }
+
+  function showLoading(msg){
+    mainArea.innerHTML = `
+      <div class="state-panel">
+        <div class="spinner"></div>
+        <p>${msg || 'Fetching air quality data…'}</p>
+      </div>`;
+  }
+
+  function showError(title, msg){
+    mainArea.innerHTML = `
+      <div class="state-panel">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M12 8v5M12 16h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <div class="state-title">${title}</div>
+        <p>${msg}</p>
+      </div>`;
+  }
+
+  async function lookupCity(query){
+    showLoading('Looking up ' + query + '…');
+    goBtn.disabled = true;
+    try {
+      const res = await fetch('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(query) + '&count=1&language=en&format=json');
+      const data = await res.json();
+      if (!data.results || !data.results.length) {
+        showError('No results', `We couldn't find "${query}". Try a different spelling or a nearby larger city.`);
+        return;
+      }
+      const place = data.results[0];
+      const locationLabel = [place.name, place.admin1, place.country].filter(Boolean).join(', ');
+      await fetchAirQuality(place.latitude, place.longitude, place.name, locationLabel);
+    } catch (err) {
+      showError('Something went wrong', "We couldn't reach the air quality service. Check your connection and try again.");
+    } finally {
+      goBtn.disabled = false;
+    }
+  }
+
+  async function fetchAirQuality(lat, lon, shortName, fullLabel){
+    showLoading('Reading the air over ' + shortName + '…');
+    try {
+      const url = 'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=' + lat + '&longitude=' + lon +
+        '&current=us_aqi,pm2_5,pm10,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone&timezone=auto';
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!data.current) {
+        showError('No data available', `Air quality data isn't available for this location right now.`);
+        return;
+      }
+      renderResult(data.current, shortName, fullLabel);
+    } catch (err) {
+      showError('Something went wrong', "We couldn't reach the air quality service. Check your connection and try again.");
+    }
+  }
+
+  function aqiInfo(aqi){
+    if (aqi == null) return { label: 'Unknown', color: '#9AA8AA', blurb: 'AQI data is not available for this location.' };
+    if (aqi <= 50) return { label: 'Good', color: 'var(--good)', blurb: 'Air quality is satisfactory. It’s a good day to be outside.' };
+    if (aqi <= 100) return { label: 'Moderate', color: 'var(--moderate)', blurb: 'Acceptable air quality, though it may be a concern for a small number of unusually sensitive people.' };
+    if (aqi <= 150) return { label: 'Unhealthy for sensitive groups', color: 'var(--sensitive)', blurb: 'People with respiratory or heart conditions, children, and older adults should limit prolonged outdoor exertion.' };
+    if (aqi <= 200) return { label: 'Unhealthy', color: 'var(--unhealthy)', blurb: 'Everyone may begin to notice health effects. Sensitive groups should avoid outdoor exertion.' };
+    if (aqi <= 300) return { label: 'Very unhealthy', color: 'var(--very-unhealthy)', blurb: 'Health alert: everyone may experience more serious health effects. Limit outdoor activity.' };
+    return { label: 'Hazardous', color: 'var(--hazardous)', blurb: 'Health warning of emergency conditions. Avoid all outdoor exertion.' };
+  }
+
+  function renderResult(current, shortName, fullLabel){
+    const info = aqiInfo(current.us_aqi);
+    const place = fullLabel || shortName;
+
+    mainArea.innerHTML = `
+      <div class="hero" style="--aqi-color:${info.color}">
+        <div class="hero-place">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 22s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z" stroke="currentColor" stroke-width="1.8"/>
+            <circle cx="12" cy="10" r="2.5" stroke="currentColor" stroke-width="1.8"/>
+          </svg>
+          ${place}
+        </div>
+        <div class="hero-main">
+          <div class="aqi-number">${current.us_aqi != null ? Math.round(current.us_aqi) : '—'}</div>
+          <div class="aqi-meta">
+            <div class="aqi-label">${info.label}</div>
+            <div class="aqi-scale">US AQI · 0–500 scale</div>
+          </div>
+        </div>
+        <div class="aqi-blurb">${info.blurb}</div>
+      </div>
+
+      <div>
+        <div class="grid-title">Pollutant levels (µg/m³, current hour)</div>
+        <div class="pollutant-grid">
+          ${pollutantTile('PM2.5', current.pm2_5)}
+          ${pollutantTile('PM10', current.pm10)}
+          ${pollutantTile('Ozone', current.ozone)}
+          ${pollutantTile('NO₂', current.nitrogen_dioxide)}
+          ${pollutantTile('SO₂', current.sulphur_dioxide)}
+          ${pollutantTile('CO', current.carbon_monoxide)}
+        </div>
+      </div>
+    `;
+  }
+
+  function pollutantTile(name, value){
+    const display = (value === null || value === undefined) ? '—' : Math.round(value * 10) / 10;
+    return `<div class="pollutant">
+      <div class="name">${name}</div>
+      <div class="value">${display}</div>
+      <div class="unit">µg/m³</div>
+    </div>`;
+  }
+
+  // Register service worker for installable PWA + offline shell
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
+})();
+</script>
+
+</body>
+</html>
